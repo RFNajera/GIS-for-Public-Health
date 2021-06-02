@@ -7,6 +7,8 @@
 # First, the libraries we'll need
 library(tmap)
 library(rgdal)
+library(maps)
+library(leaflet)
 
 # Now, the shapefile of the city of Baltimore
 
@@ -17,3 +19,23 @@ baltimore.shape <- readOGR("Percent_of_Population_65_Years_and_over", # Folder w
 # Now, the map!
 
 plot(baltimore.shape) # Super basic map of Baltimore with boundaries of the Community Statistical Areas
+
+# Now, a quick thematic map with no color
+
+map.1 <- qtm(baltimore.shape)
+map.1
+
+# Now, a leaflet map
+
+content <- paste(sep = "<br/>",
+                 "<b><a href='http://thewalters.org/'>The Walters Art Museum</a></b>",
+                 "600 N Charles St, Baltimore, MD 21201"
+)
+
+map.2 <- leaflet() %>% 
+  setView(lng = -76.6167377, lat = 39.2962229, zoom = 12) %>% 
+  addTiles() %>% 
+  addPopups(-76.6167377, 39.2962229, content,
+            options = popupOptions(closeButton = FALSE)
+  )
+map.2
