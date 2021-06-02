@@ -23,16 +23,27 @@ map.1
 
 # Not so quick but pretty map of people over age 65 in Baltimore in 2019
 
+water.shape <- readOGR("water","water")
+
 hist(baltimore.shape$age65_19) # Look at the distribution of age in Baltimore
 
 map.2 <- tm_shape(baltimore.shape) + # Tell tmap which shapefile to use
   tm_fill(col = "age65_19", # Tell tmap what color to use for each Community Statistical Area (CSA)
-              
-          title = "Percent of People Age 65 and Older" # Title of the legend
+          title = "Percent of People Age 65 and Older", # Title of the legend
+          legend.format=list(fun=function(x) paste0(formatC(x, digits=0, format="f"), " %")) # Numbers as percents
               ) +
-  tm_borders(col = "black"
+  tm_borders(col = "black" # Color of the borders
              ) +
-  tm_layout(legend.outside = T,
-            title = "Distribution of People Age 65 and Older in Baltimore, 2019",
-            title.size = 1)
+  tm_shape(water.shape) + # Adds the water shapefile
+  tm_fill(col = "blue") + # Colors the water blue
+  tm_layout(legend.outside = T, # Legend is outside the map frame
+            legend.title.size = 1, # Size of the legend title
+            legend.position = c("left","center"), # Position of the legend
+            title = "Distribution of Residents Age 65 and Older in Baltimore, 2019", # Title of the map
+            title.size = 1 # Size of the title
+            ) +
+  tm_compass(type = "8star", # Type of compass
+             position = c("left","bottom"), # Position of the compass
+             size = 8 # Size of the compass
+             )
 map.2
