@@ -39,11 +39,12 @@ map.2 <- tm_shape(baltimore.shape) + # Tell tmap which shapefile to use
   tm_layout(legend.outside = T, # Legend is outside the map frame
             legend.title.size = 1, # Size of the legend title
             legend.position = c("left","center"), # Position of the legend
-            title = "Distribution of Residents Age 65 and Older in Baltimore, 2019", # Title of the map
+            title = "Distribution of People Age 65 and Older in Baltimore, 2019", # Title of the map
             title.size = 1 # Size of the title
             ) +
   tm_compass(type = "8star", # Type of compass
              position = c("left","bottom"), # Position of the compass
              size = 8 # Size of the compass
-             )
+             ) +
+  tm_scale_bar()
 map.2
