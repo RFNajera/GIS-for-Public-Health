@@ -7,10 +7,9 @@
 # First, the libraries we'll need
 library(tmap)
 library(rgdal)
-library(maps)
 library(leaflet)
 
-# Now, the shapefile of the city of Baltimore
+# First, bring in the shapefile of the city of Baltimore
 
 baltimore.shape <- readOGR("Percent_of_Population_65_Years_and_over", # Folder within your main folder where the shape file is
                            "Percent_of_Population_65_Years_and_over" # Name of the shapefile
@@ -22,6 +21,7 @@ plot(baltimore.shape) # Super basic map of Baltimore with boundaries of the Comm
 
 # Now, a quick thematic map with no color
 
+tmap_mode("plot")
 map.1 <- qtm(baltimore.shape)
 map.1
 
