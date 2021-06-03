@@ -84,5 +84,5 @@ map.2
 # And then we animate it
 
 map.3 <- tmap_animation(map.2,
-                        loop = T,
-                        filename = "baltimore_age65.mp4")
+                        # filename = "baltimore_age65.mp4", # uncomment if you want to save a new copy
+                        loop = T)
