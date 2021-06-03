@@ -7,18 +7,20 @@
 # First, the libraries we'll need
 library(tmap)
 library(rgdal)
-library(tigris)
 library(gifski)
+library(av)
 
-# Now, the shapefile of the city of Baltimore
+# Now, the shapefile of the city of Baltimore and the water features
 
 baltimore.shape <- readOGR("Percent_of_Population_65_Years_and_over", # Folder within your main folder where the shape file is
                            "Percent_of_Population_65_Years_and_over" # Name of the shapefile
 )
 
+water.shape <- readOGR("water","water")
+
 # First, the choropleth we created of the population 65 and over
 
-water.shape <- readOGR("water","water")
+
 
 map.1 <- tm_shape(baltimore.shape) + # Tell tmap which shapefile to use
   tm_fill(col = "age65_19", # Tell tmap what color to use for each Community Statistical Area (CSA)
@@ -82,4 +84,5 @@ map.2
 # And then we animate it
 
 map.3 <- tmap_animation(map.2,
-                        loop = T)
+                        loop = T,
+                        filename = "baltimore_age65.mp4")
