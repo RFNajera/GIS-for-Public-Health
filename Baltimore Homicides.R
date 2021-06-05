@@ -6,14 +6,13 @@
 
 # Libraries ----
 
-library(tidyverse)
-library(raster)
-library(tmap)
-library(rgdal)
-library(tigris)
-library(sf)
-library(spdep)
-library(SpatialEpi)
+library(tidyverse) # For data manipulation
+library(tmap) # For mapping
+library(rgdal) # For dealing with spatial data, like reading the shapefiles in
+library(tigris) # For dealing with spatial data, like spatial joins
+library(sf) # For dealing with spatial datal, like setting CRS
+library(spdep) # For calculating spatial dependencies, like Moran's I or Getis-Ord
+
 
 # Load shapefiles ----
 
@@ -178,13 +177,6 @@ homicide.dots.map <-
   tm_fill(col = "rate",
           textNA = "No Homicides",
           title = "Rate per 10k Residents") +
-  # tm_shape(baltimore.homicides) +
-  # tm_symbols(col = "race",
-  #            size = 0.1,
-  #            shape = "race",
-  #            legend.shape.show = T,
-  #            legend.col.show = F,
-  #            title.shape = "Race/Ethnicity") +
   tm_compass(position = c("left","bottom")) +
   tm_layout(
     main.title = "Map of Homicides in Baltimore City, 2005 to 2017",
@@ -243,7 +235,6 @@ moran.plot(homicide.rates$rate,map_nbq_w)
 
 x <- homicide.rates$srate %>% as.vector()
 y <- homicide.rates$lag_srate %>% as.vector()
-xx <- data.frame(x, y) # Matrix of the variables we just created
 
 moran.plot(x, map_nbq_w) # One way to make a Moran Plot
 
