@@ -24,41 +24,54 @@ water.shape <- readOGR("Water",
 # Load the homicide data ----
 
 baltimore.homicides.data <- read.csv("Baltimore-2018-homicides-geocoded.csv") %>% 
-  mutate(event_date = lubridate::mdy(factor(event_date))) %>% 
-  mutate(month = factor(lubridate::month(event_date),
+  mutate(event_date = lubridate::mdy(factor(event_date))) %>% # Make event date into a date format
+  mutate(month = factor(lubridate::month(event_date), # Extract month and label it
                         labels = c("Jan","Feb","Mar","Apr",
                                    "May","Jun","Jul","Aug",
                                    "Sep","Oct","Nov","Dec"))) %>% 
-  mutate(week = lubridate::epiweek(event_date))
+  mutate(year = lubridate::year(event_date)) %>% # Extract the year number
+  mutate(week = lubridate::epiweek(event_date)) # Extract the epidemiological week
 
 # Descriptive statistics of the victims and the date/time of homicides ----
 
-table(baltimore.homicides.data$race)
-hist(baltimore.homicides.data$age)
-table(baltimore.homicides.data$sex)
-table(baltimore.homicides.data$mode)
-date.graph <- baltimore.homicides.data %>% 
+table(baltimore.homicides.data$race) # Make a table of number of homicides by race/ethnicity
+hist(baltimore.homicides.data$age) # Make a histogram of age variable
+table(baltimore.homicides.data$sex) # Make a table of number of homicides by sex
+table(baltimore.homicides.data$mode) # Make a table of the number of homicides by mode of death
+date.graph <- baltimore.homicides.data %>% # Make a bar graph of homicides by week
   ggplot(aes(x = week)) +
-  geom_bar()
-date.graph
-month.graph <- baltimore.homicides.data %>% 
+  geom_bar() +
+  theme_classic() +
+  labs(x = "MMWR Week",
+       y = "Number of Homicides",
+       title = "Homicides per MMWR Week, Baltimore, 2005 to 2017")
+date.graph # Look at the bar graph of homicides by week
+month.graph <- baltimore.homicides.data %>% # Make a bar graph of homicides by month
   ggplot(aes(x = month)) +
   geom_bar()
-month.graph
+month.graph # Look at the bar graph of homicides by month
+year.graph <- baltimore.homicides.data %>% # Make a bar graph of homicides by year
+  ggplot(aes(x = year)) +
+  geom_bar() +
+  theme_classic() +
+  labs(x = "Year",
+       y = "Number of Homicides",
+       title = "Number of Homicides per Year in Baltimore, 2005 to 2017")
+year.graph # Look at the bar graph of homicides by year
 
 # Get the points to be a shapefile ----
 
-baltimore.homicides <- st_as_sf(x = baltimore.homicides.data, 
-                        coords = c("lon", "lat"),
-                        crs = "+proj=longlat +datum=WGS84")
-baltimore.homicides <- as(baltimore.homicides, "Spatial")
-baltimore.shape <- spTransform(baltimore.shape, CRS("+proj=longlat +datum=WGS84"))
+baltimore.homicides <- st_as_sf(x = baltimore.homicides.data, # Transform dataframe to simple feature (sf)
+                        coords = c("lon", "lat"), # Tell it where the latitude and longitude are
+                        crs = "+proj=longlat +datum=WGS84") # Give it a CRS
+baltimore.homicides <- as(baltimore.homicides, "Spatial") # Make the simple feature into a spatial feature
+baltimore.shape <- spTransform(baltimore.shape, CRS("+proj=longlat +datum=WGS84")) # Give the baltimore shape the same CRS
 
 # Map of where the homicides happened ----
 
 tmap_mode("plot") # Set tmap to plot. To make interactive, use "view"
 
-homicide.dots.map <-
+homicide.dots.map <- # Create the map of homicides with points
   tm_shape(baltimore.shape) +
   tm_borders(col = "black",
              lwd = 0.5) +
@@ -91,11 +104,11 @@ homicide.dots.map <-
     size = 0.5
   ) +
   tmap_options(unit = "mi")
-homicide.dots.map
+homicide.dots.map # Look at the map
 
 # Map of where and what month the homicides happened ----
 
-homicide.dots.map <-
+homicide.dots.map <- # Create a map of dots, with each dot representing a month
   tm_shape(baltimore.shape) +
   tm_borders(col = "black",
              lwd = 0.5) +
@@ -122,7 +135,7 @@ homicide.dots.map <-
     position = c("left","bottom")
   ) +
   tmap_options(unit = "mi")
-homicide.dots.map
+homicide.dots.map # Look at your map
 
 # Map of where and who was killed ----
 
@@ -159,15 +172,15 @@ homicide.dots.map
 
 # Join the points to the polygons to calculate rates ----
 
-homicide.dots.polys <- sp::over(baltimore.homicides,
-                                baltimore.shape) %>% 
-  group_by(CSA2010,tpop10) %>% 
-  summarise(homicides = n()) %>% 
-  mutate(rate = (homicides/tpop10)*10000)
-homicide.rates <- geo_join(baltimore.shape,
-                           homicide.dots.polys,
-                           "CSA2010",
-                           "CSA2010")
+homicide.dots.polys <- sp::over(baltimore.homicides, # The dots
+                                baltimore.shape) %>% # The polygons
+  group_by(CSA2010,tpop10) %>% # By which variables you're grouping
+  summarise(homicides = n()) %>% # Number of homicides in each CSA
+  mutate(rate = (homicides/tpop10)*10000) # Caluclate the rate per 10,000  residents
+homicide.rates <- geo_join(baltimore.shape, # Join the baltimore shape to...
+                           homicide.dots.polys, # The data with the rates in it, by...
+                           "CSA2010", # These variables for the shape and...
+                           "CSA2010") # These variables for the one with rate
 
 # Make the map of the rates ----
 
@@ -197,18 +210,18 @@ homicide.dots.map <-
   tmap_options(unit = "mi")
 homicide.dots.map
 
-# Spatial Autocorrelation ----
+# Spatial Autocorrelation with Moran's I ----
 
 map_nbq <-
   poly2nb(homicide.rates) # Creates list of neighbors to each CSA
 added <-
   as.integer(c(7, 50)) # Adds neighbors 7 and 50 to CSA 4 (it looks like an island)
 map_nbq[[4]] <- added # Fixes the region (4) without neighbors
-View(map_nbq) # View to make sure CSA 4 has neighbors 7 and 50.
+head(map_nbq) # View to make sure CSA 4 has neighbors 7 and 50.
 
 map_nbq_w <-
   nb2listw(map_nbq, zero.policy = T) # Creates list of neighbors and weights. Weight = 1/number of neighbors.
-View(map_nbq_w) # View the list
+head(map_nbq_w) # View the list
 
 local.moran <-
   localmoran(homicide.rates$rate, # Which variable you'll use for the autocorrelation
@@ -226,36 +239,19 @@ homicide.rates$lag_srate <- lag.listw(map_nbq_w,
 summary(homicide.rates$srate) # Summary of the srate variable
 summary(homicide.rates$lag_srate) # Summary of the lag_srate variable
 
-# Moran's I test
+# Moran's I test & plot
 
-moran.test(homicide.rates$rate,map_nbq_w)
-moran.plot(homicide.rates$rate,map_nbq_w)
+moran.test(homicide.rates$rate,map_nbq_w) # Moran's I test
+moran.plot(homicide.rates$rate,map_nbq_w) # Create a plot
 
-# Moran's I Plot
+# Moran's I Plot alone
 
-x <- homicide.rates$srate %>% as.vector()
-y <- homicide.rates$lag_srate %>% as.vector()
+x <- homicide.rates$srate %>% as.vector() # The X variables
+y <- homicide.rates$lag_srate %>% as.vector() # The Y variables
 
 moran.plot(x, map_nbq_w) # One way to make a Moran Plot
 
-# Another way to make Moran's I Plot
-
-plot(x = homicide.rates$srate,
-     y = homicide.rates$lag_srate,
-     main = "Moran Scatterplot Homicide Rate",
-     xlab = "Homicide Rate (Scaled)",
-     ylab = "Lagged Homicides Rate (Scaled)"
-     )
-abline(h = 0,
-       v = 0) # Adds the crosshairs at (0,0)
-abline(
-  lm(homicide.rates$lag_srate ~ homicide.rates$srate),
-  lty = 3,
-  lwd = 4,
-  col = "red"
-) # Adds a red dotted line to show the line of best fit
-
-# Designate the quadrants
+# Designate the quadrants to match what we see on the plot
 
 homicide.rates$quad <-
   NA # Create variable for where the pair falls on the quadrants of the Moran plot
@@ -274,18 +270,18 @@ local.moran$OBJECTID <- 0 # Creating a new variable
 local.moran$OBJECTID <- 1:nrow(local.moran) # Adding an object ID
 local.moran$pvalue <-
   round(local.moran$`Pr(z > 0)`, 3) # Rounding the p value to three decimal places
-local.moran$Ii <- round(local.moran$Ii,1)
+local.moran$Ii <- round(local.moran$Ii,1) # Rounding the I variable to one decimal point
 
-map.counts <- geo_join(homicide.rates,
-                       local.moran,
-                       "OBJECTID",
+moran.i.map <- geo_join(homicide.rates, #Join the data from the rates dataframe to...
+                       local.moran, # The local Moran shape by...
+                       "OBJECTID", # These variables
                        "OBJECTID")
 
 colors <-
   c("red", "lightpink", "skyblue2", "blue", "white") # Color Palette
 
 local.moran.map <-
-  tm_shape(map.counts) +
+  tm_shape(moran.i.map) +
   tm_fill("quad",
           title = "Local Moran's I",
           palette = colors,
@@ -324,29 +320,29 @@ local.moran.map
 
 # Keep only the CSAs with p-values less than 0.05 (though we should be using much smaller)
 
-map.counts$quad_sig <-
+moran.i.map$quad_sig <-
   NA # Creates a variable for where the significant pairs fall on the Moran plot
-map.counts@data[(map.counts$srate >= 0 &
-                   map.counts$lag_srate >= 0) &
+moran.i.map@data[(moran.i.map$srate >= 0 &
+                   moran.i.map$lag_srate >= 0) &
                   (local.moran[, 5] <= 0.05), "quad_sig"] <- "High-High, p <0.05" # High-High
-map.counts@data[(map.counts$srate <= 0 &
-                   map.counts$lag_srate <= 0) &
+moran.i.map@data[(moran.i.map$srate <= 0 &
+                   moran.i.map$lag_srate <= 0) &
                   (local.moran[, 5] <= 0.05), "quad_sig"] <- "Low-Low, p <0.05" # Low-Low
-map.counts@data[(map.counts$srate >= 0 &
-                   map.counts$lag_srate <= 0) &
+moran.i.map@data[(moran.i.map$srate >= 0 &
+                   moran.i.map$lag_srate <= 0) &
                   (local.moran[, 5] <= 0.05), "quad_sig"] <- "High-Low, p <0.05" # High-Low
-map.counts@data[(map.counts$srate <= 0 &
-                   map.counts$lag_srate >= 0) &
+moran.i.map@data[(moran.i.map$srate <= 0 &
+                   moran.i.map$lag_srate >= 0) &
                   (local.moran[, 5] <= 0.05), "quad_sig"] <- "Low-High, p <0.05" # Low-High
-map.counts@data[(map.counts$srate <= 0 &
-                   map.counts$lag_srate >= 0) &
+moran.i.map@data[(moran.i.map$srate <= 0 &
+                   moran.i.map$lag_srate >= 0) &
                   (local.moran[, 5] <= 0.05), "quad_sig"] <-"Not Significant. p>0.05" # Non-significant
 
 colors2 <-
   c("red", "blue", "white") # Color Palette
 
-local.moran.map.sig <-
-  tm_shape(map.counts) +
+local.moran.map.sig <- # Make the map of the CSAs that have significant observations
+  tm_shape(moran.i.map) +
   tm_fill(
     "quad_sig",
     title = "Local Moran's I",
@@ -373,7 +369,8 @@ local.moran.map.sig <-
     text.size = 0.5,
     color.dark = "black",
     color.light = "yellow",
-    lwd = 1
+    lwd = 1,
+    position = c("left", "bottom")
   ) +
   tm_add_legend(
     type = "text",
@@ -383,20 +380,21 @@ local.moran.map.sig <-
     size = 4
   ) +
   tmap_options(unit = "mi")
-local.moran.map.sig
+local.moran.map.sig # Look at the map
 
 # Getis-Ord Hot Spots ----
 
 #Calculate Getis-Ord "Hot Spots"
 homicide.rates$Gstat<-round(localG(homicide.rates$rate,
-                             map_nbq_w),2)
-head(homicide.rates)
+                             map_nbq_w),2) # Calculating the G statistic and rounding it to two decimals
+head(homicide.rates) # Quick peek to see it worked
 
 #Set breaks at standard confidence levels
-breaksg<-c(-Inf,-1.96,-1.645,1.645,1.96,Inf)
-colorsg<-c("blue","cyan","white","magenta","red")
+breaksg<-c(-Inf,-1.96,-1.645,1.645,1.96,Inf) # Remember the 68-95-99 rule? This is kind of like that.
+colorsg<-c("blue","cyan","white","magenta","red") # Gives colors similar to what ArcGIS does
 
-#make a choropleth map
+# Make the map of Gi* statistics by CSA
+
 getis.map <- tm_shape(homicide.rates) +
   tm_fill(
     "Gstat",
@@ -429,4 +427,5 @@ getis.map <- tm_shape(homicide.rates) +
     position = c("left","bottom")
   ) +
   tmap_options(unit = "mi")
-getis.map
+getis.map # Look at the map
+
