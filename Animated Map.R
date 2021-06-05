@@ -20,8 +20,6 @@ water.shape <- readOGR("water","water")
 
 # First, the choropleth we created of the population 65 and over
 
-
-
 map.1 <- tm_shape(baltimore.shape) + # Tell tmap which shapefile to use
   tm_fill(col = "age65_19", # Tell tmap what color to use for each Community Statistical Area (CSA)
           title = "Percent of People Age 65 and Older", # Title of the legend
