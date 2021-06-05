@@ -20,7 +20,6 @@ water.shape <- readOGR("water","water")
 
 # Create the map with Leaflet
 
-
 bins <- c(0,5,10,15,20,25,30) # How many bins the data will take up
 pal <- colorBin("YlOrRd", domain = baltimore.shape$age65_19, bins = bins) # Color yellow-orange-red palette
 labels <- sprintf( # Create the lables
