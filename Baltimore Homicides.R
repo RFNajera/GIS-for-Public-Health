@@ -1,4 +1,4 @@
-# Standardizing Community Indicators
+# Baltimore Homicide Mapping
 # GIS for Public Health Using R Programming
 # https://classroom.google.com/u/0/c/MzUwMTM3NjEzODk5
 # Rene F. Najera, DrPH
@@ -77,11 +77,11 @@ homicide.dots.map <- # Create the map of homicides with points
              lwd = 0.5) +
   tm_shape(baltimore.homicides) +
   tm_dots(col = "red",
-          title = "2018 Homicides",
+          title = "2017 Homicides",
           size = 0.1, ) +
   tm_compass(position = c("left","bottom")) +
   tm_layout(
-    main.title = "Map of Homicides in Baltimore City, 2005 to 2017",
+    main.title = "Homicides in Baltimore City, 2005 to 2017",
     main.title.size = 0.8,
     legend.position = c("left", "center"),
     compass.type = "4star",
@@ -119,7 +119,7 @@ homicide.dots.map <- # Create a map of dots, with each dot representing a month
           title.col = "Month") +
   tm_compass(position = c("left","bottom")) +
   tm_layout(
-    main.title = "Map of Homicides in Baltimore City, 2005 to 2017",
+    main.title = "Homicides in Baltimore City, 2005 to 2017",
     main.title.size = 0.8,
     legend.position = c("left", "center"),
     compass.type = "4star",
@@ -152,7 +152,7 @@ homicide.dots.map <-
              title.shape = "Race/Ethnicity") +
   tm_compass(position = c("left","bottom")) +
   tm_layout(
-    main.title = "Map of Homicides in Baltimore City, 2005 to 2017",
+    main.title = "Homicides in Baltimore City, 2005 to 2017",
     main.title.size = 0.8,
     legend.position = c("left", "center"),
     compass.type = "4star",
@@ -192,7 +192,7 @@ homicide.dots.map <-
           title = "Rate per 10k Residents") +
   tm_compass(position = c("left","bottom")) +
   tm_layout(
-    main.title = "Map of Homicides in Baltimore City, 2005 to 2017",
+    main.title = "Homicides in Baltimore City, 2005 to 2017",
     main.title.size = 0.8,
     legend.position = c("left", "center"),
     compass.type = "4star",
@@ -290,9 +290,9 @@ local.moran.map <-
              lwd = 0.5) +
   tm_text("Ii",
           size = 0.5) +
-  tm_compass() +
+  tm_compass(position = c("left","bottom")) +
   tm_layout(
-    main.title = "Map of Local Moran's I for Homicide Rates in Baltimore, 2005 to 2017",
+    main.title = "Local Moran's I for Homicide Rates in Baltimore, 2005 to 2017",
     main.title.size = 0.8,
     legend.position = c("left", "bottom"),
     compass.type = "4star",
@@ -356,7 +356,7 @@ local.moran.map.sig <- # Make the map of the CSAs that have significant observat
           size = 0.5) +
   tm_compass(position = c("left","bottom")) +
   tm_layout(
-    main.title = "Map of Local Moran's I for Homicide Rates in Baltimore, 2005 to 2017",
+    main.title = "Local Moran's I for Homicide Rates in Baltimore, 2005 to 2017",
     main.title.size = 0.8,
     legend.position = c("left", "bottom"),
     compass.type = "4star",
@@ -410,7 +410,7 @@ getis.map <- tm_shape(homicide.rates) +
           size = 0.5) +
   tm_compass(position = c("left","bottom")) +
   tm_layout(
-    main.title = "Map of Getis-Ord Gi* Statistic for Homicide Rates in Baltimore, 2005 to 2017",
+    main.title = "Getis-Ord Gi* Statistic for Homicide Rates in Baltimore, 2005 to 2017",
     main.title.size = 0.8,
     legend.position = c("left", "bottom"),
     compass.type = "4star",
@@ -428,4 +428,3 @@ getis.map <- tm_shape(homicide.rates) +
   ) +
   tmap_options(unit = "mi")
 getis.map # Look at the map
-
