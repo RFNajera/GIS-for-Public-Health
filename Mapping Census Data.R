@@ -25,8 +25,8 @@ View(v19)
 
 # Mapping overcrowding ----
 
-overcrowding.vars <- c(paste0("B25014", c("H", "I", "B", "D", "G"), "_001"), # Pull the totals
-          paste0("B25014", c("H", "I", "B", "D", "G"), "_003")) # Pull the 
+overcrowding.vars <- c(paste0("B25014", c("H", "I", "B", "D", "G"), "_001"), # Pull the total households by race
+          paste0("B25014", c("H", "I", "B", "D", "G"), "_003")) # Pull the overcrowded households by race
 
 ffx.overcrowding <- get_acs(
   geography = "tract",
@@ -34,7 +34,7 @@ ffx.overcrowding <- get_acs(
   county = c("Fairfax County",
              "Fairfax City",
              "Falls Church City"),
-  variables = c(overcrowding.vars,
+  variables = c(overcrowding.vars, # Pull the variables above plus...
                 "B25014_001", # Total occupants per room, denominator
                 "B25014_005", # Owner occupied, 1 to 1.5 occupants per room
                 "B25014_011", # Renter occupied, 1 to 1.5 occupants per room
