@@ -1,4 +1,4 @@
-# Standardizing Community Indicators
+# Mapping guns within 1,000 feet from schools in Baltimore
 # GIS for Public Health Using R Programming
 # https://classroom.google.com/u/0/c/MzUwMTM3NjEzODk5
 # Rene F. Najera, DrPH
