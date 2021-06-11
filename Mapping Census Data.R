@@ -15,7 +15,7 @@ library(tmap) # To make the map
 
 # Look at ACS Variables ----
 
-# The following code allows you to 
+# The following code allows you to look at all the variables in the ACS
 
 v19 <- load_variables(2019, # Year you're interested
                       "acs5", # What part of the ACS you're pulling data from
@@ -239,3 +239,73 @@ map.3 <- tm_shape(ffx.poverty.zip) +
   tm_compass(position = c("left","top")) +
   tm_scale_bar(position = c("left","top"))
 map.3
+
+# Poverty by County in all of Virginia ----
+
+# Getting data on poverty  by County ----
+
+va.poverty.county <- get_acs(geography = "county", # County
+                           state = "VA", # In Virginia Only
+                           variables = c(poverty.vars,
+                                         "B17020_001" # Total Overall
+                           ),
+                           year = 2019, # What year?
+                           geometry = T # Get the geometry to make the maps
+) %>%
+  dplyr::select(GEOID, NAME, variable, estimate) %>%
+  spread(variable, estimate) %>%
+  rowwise() %>%
+  mutate(
+    pct_poverty_all = sum(c(B17020H_002,
+                            B17020I_002,
+                            B17020B_002,
+                            B17020C_002,
+                            B17020D_002,
+                            B17020G_002)
+    ) / B17020_001 * 100,
+    # White H, Hispanic I, B Black, D Asian, G Multiracial, C American Indian
+    pct_poverty_white = B17020H_002 / B17020H_001 * 100,
+    pct_poverty_hispanic = B17020I_002 / B17020I_001 * 100,
+    pct_poverty_black = B17020B_002 / B17020B_001 * 100,
+    pct_poverty_asian = B17020D_002 / B17020D_001 * 100,
+    pct_poverty_multi = B17020G_002 / B17020G_001 * 100,
+    pct_poverty_ai = B17020C_002 / B17020C_001 * 100,
+    GEOID = as.numeric(GEOID)
+  ) %>%
+  dplyr::select(
+    GEOID,
+    NAME,
+    pct_poverty_all,
+    pct_poverty_white,
+    pct_poverty_hispanic,
+    pct_poverty_black,
+    pct_poverty_asian,
+    pct_poverty_multi,
+    pct_poverty_ai
+  )
+
+map.4 <- tm_shape(va.poverty.county) +
+  tm_polygons(col = c("pct_poverty_all",
+                      "pct_poverty_white",
+                      "pct_poverty_hispanic",
+                      "pct_poverty_black",
+                      "pct_poverty_asian",
+                      "pct_poverty_multi",
+                      "pct_poverty_ai"),
+              title = "% of Households in Poverty",
+              legend.format=list(fun=function(x) paste0(formatC(x, digits=0, format="f"), " %")),
+              style = "fixed",
+              breaks = c(0,10,20,30,40,50,60,70,80,90,100)
+  ) +
+  tm_layout(panel.labels = c("All Residents",
+                             "White",
+                             "Hispanic",
+                             "Black",
+                             "Asian",
+                             "Multiracial",
+                             "Native American"),
+            legend.outside = T
+  ) +
+  tm_compass(position = c("left","top")) +
+  tm_scale_bar(position = c("left","top"))
+map.4
