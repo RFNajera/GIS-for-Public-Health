@@ -7,7 +7,7 @@
 # Libraries ----
 
 library(tidycensus) # To load the ACS data
-# census_api_key(key="YOUR_KEY", install = T, overwrite = T)
+# census_api_key(key="YOUR_KEY", install = T, overwrite = T) # Don't forget to restart R
 library(tidyverse) # To manipulate data
 library(tigris) # To read/manipulate shape files
 library(sf) # To create simple features for mapping
@@ -169,6 +169,76 @@ map.2 <- tm_shape(ffx.poverty) +
             ) +
   tm_compass(position = c("left","top"))
 map.2
+
+# Mapping poverty in Frederick County, Maryland ----
+
+fred.poverty <- get_acs(geography = "tract",
+                       state = "MD",
+                       county = c("Frederick County"),
+                       variables = c(poverty.vars,# Poverty denominator
+                                     "B17020_001" # Total Overall
+                       ),
+                       year = 2019, # What year
+                       geometry = T # Get the geometry to make the map
+) %>%
+  select(GEOID, NAME, variable, estimate) %>%
+  spread(variable, estimate) %>%
+  rowwise() %>%
+  mutate(pct_poverty_all = sum(c(B17020H_002,
+                                 B17020I_002,
+                                 B17020B_002,
+                                 B17020C_002,
+                                 B17020D_002,
+                                 B17020G_002)
+  ) / B17020_001 * 100,
+  # White H, Hispanic I, B Black, D Asian, G Multiracial, C American Indian
+  pct_poverty_white = B17020H_002 / B17020H_001 * 100,
+  pct_poverty_hispanic = B17020I_002 / B17020I_001 * 100,
+  pct_poverty_black = B17020B_002 / B17020B_001 * 100,
+  pct_poverty_asian = B17020D_002 / B17020D_001 * 100,
+  pct_poverty_multi = B17020G_002 / B17020G_001 * 100,
+  pct_poverty_ai = B17020C_002 / B17020C_001 * 100,
+  GEOID = as.numeric(GEOID)) %>%
+  select(GEOID,
+         NAME,
+         pct_poverty_all,
+         pct_poverty_white,
+         pct_poverty_hispanic,
+         pct_poverty_black,
+         pct_poverty_asian,
+         pct_poverty_multi,
+         pct_poverty_ai
+  )
+
+# Make the map of poverty by census tract ----
+
+map.2.5 <- tm_shape(fred.poverty) +
+  tm_polygons(col = c("pct_poverty_all",
+                      "pct_poverty_white",
+                      "pct_poverty_hispanic",
+                      "pct_poverty_black",
+                      "pct_poverty_asian",
+                      "pct_poverty_multi"),
+              title = "% of Households in Poverty",
+              legend.format=list(fun=function(x) paste0(formatC(x, digits=0, format="f"), " %")),
+              style = "fixed",
+              breaks = c(0,10,20,30,40,50,60,70,80,90,100)
+  ) +
+  tm_layout(main.title = "Poverty in Frederick County, Maryland",
+            
+            panel.labels = c("All Residents",
+                             "White",
+                             "Hispanic",
+                             "Black",
+                             "Asian",
+                             "Multiracial"),
+            legend.outside = T
+  ) +
+  tm_compass(position = c("left","top")) +
+  tm_credits("2019 ACS 5-Year Estimate",
+             position=c("right", "bottom"),
+             size = 0.5)
+map.2.5
 
 # Poverty by ZIP code in all of Virginia ----
 
