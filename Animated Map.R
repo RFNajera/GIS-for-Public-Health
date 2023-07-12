@@ -2,7 +2,7 @@
 # GIS for Public Health Using R Programming
 # https://classroom.google.com/u/0/c/MzUwMTM3NjEzODk5
 # Rene F. Najera, DrPH
-# Summer 2021
+# Updated July 2023
 
 # First, the libraries we'll need
 library(tmap)

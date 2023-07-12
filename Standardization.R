@@ -2,13 +2,14 @@
 # GIS for Public Health Using R Programming
 # https://classroom.google.com/u/0/c/MzUwMTM3NjEzODk5
 # Rene F. Najera, DrPH
-# Summer 2021
+# Updaetd July 2023
 
 # Libraries
 library(tidyverse)
 library(tmap)
 library(rgdal)
 library(tigris)
+library(sf)
 
 # Bring in the data
 
@@ -43,18 +44,16 @@ baltimore.index <- uhn.index(my.data, lower.better)
 
 # Import the shapefile
 
-baltimore.shape <- readOGR("Percent_of_Population_65_Years_and_over",
+baltimore.shape <- st_read("Percent_of_Population_65_Years_and_over",
                            "Percent_of_Population_65_Years_and_over")
 
-water.shape <- readOGR("Water",
+water.shape <- st_read("Water",
                        "water")
 
 # Join the data to the shapefile
 
-baltimore.map.data <- geo_join(baltimore.shape,
-                               baltimore.index,
-                               "CSA2010",
-                               "CSA2010")
+baltimore.map.data <- left_join(baltimore.shape,
+                               baltimore.index)
 
 # Make your map!
 
