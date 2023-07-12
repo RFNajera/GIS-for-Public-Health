@@ -6,17 +6,17 @@
 
 # First, the libraries we'll need
 library(tmap)
-library(rgdal)
+library(sf)
 library(gifski)
 library(av)
 
 # Now, the shapefile of the city of Baltimore and the water features
 
-baltimore.shape <- readOGR("Percent_of_Population_65_Years_and_over", # Folder within your main folder where the shape file is
+baltimore.shape <- read_sf("Percent_of_Population_65_Years_and_over", # Folder within your main folder where the shape file is
                            "Percent_of_Population_65_Years_and_over" # Name of the shapefile
 )
 
-water.shape <- readOGR("water","water")
+water.shape <- read_sf("water","water")
 
 # First, the choropleth we created of the population 65 and over
 

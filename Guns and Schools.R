@@ -2,7 +2,7 @@
 # GIS for Public Health Using R Programming
 # https://classroom.google.com/u/0/c/MzUwMTM3NjEzODk5
 # Rene F. Najera, DrPH
-# Summer 2021
+# Updated July 2023
 
 # Libraries ----
 library(tidyverse)
@@ -14,29 +14,27 @@ library(raster)
 
 # Shapefiles ----
 
-baltimore.shape <- readOGR("Total_Population",
+baltimore.shape <- st_read("Total_Population",
                            "Total_Population")
-water.shape <- readOGR("Water",
+water.shape <- st_read("Water",
                        "water")
-baltimore.schools <- readOGR("BCPSS_Schools",
+baltimore.schools <- st_read("BCPSS_Schools",
                              "BCPSS_Schools")
 
 # Homicides, but only the gun-related ones in 2017 ----
-
 baltimore.homicides <- read.csv("Baltimore-2018-homicides-geocoded.csv") %>% 
   mutate(event_date = lubridate::mdy(factor(event_date))) %>% # Make event date into a date format
   filter(lubridate::year(event_date) == 2017) %>% # Only those ocurring on 2017
   filter(mode == "shooting") %>% # Only the shooting ones
-  dplyr::select(id_code,lon,lat) # Keep only the shooting ID and the longitude and latitude
+  dplyr::select(id_code,lon,lat) %>% # Keep only the shooting ID and the longitude and latitude
+  st_as_sf(coords = c("lon","lat"), # Convert to an sf object
+           crs = "+proj=longlat +datum=WGS84")
 
-# Make the homicide list into a spatial file ----
+# Check it
+ggplot() +
+  geom_sf(data = baltimore.homicides) +
+  theme_minimal()
 
-baltimore.homicides <- st_as_sf(x = baltimore.homicides, # Transform dataframe to simple feature (sf)
-                                coords = c("lon", "lat"), # Tell it where the latitude and longitude are
-                                crs = "+proj=longlat +datum=WGS84") # Give it a CRS
-baltimore.homicides <- as(baltimore.homicides, "Spatial") # Make the simple feature into a spatial feature
-baltimore.shape <- spTransform(baltimore.shape, CRS("+proj=longlat +datum=WGS84")) # Give the baltimore shape the same CRS
-baltimore.schools <- spTransform(baltimore.schools,proj4string(baltimore.homicides)) # Give the baltimore shape the same CRS
 
 # Quick map of all the schools and homicides ----
 
@@ -50,15 +48,19 @@ map.1 <- tm_shape(baltimore.shape) +
   tm_dots(col = "red")
 map.1
 
-# Make the buffers around the schools at 1,000 feet ----
+# Make the buffers around the schools at 1,000 feet or 304.8 meters ----
+buffer <- st_buffer(baltimore.schools, # Layer for buffers
+              304.8 # Buffer in meters
+              ) %>% 
+  st_transform(crs = "+proj=longlat +datum=WGS84") # Assign the CRS
 
-buffer <- buffer(baltimore.schools, # Layer for buffers
-              width = 304.8, # Buffer in meters
-              dissolve = F)
-plot(buffer) # Take a look at the result
+# Check it
+ggplot() +
+  geom_sf(data = buffer) +
+  theme_minimal()
+
 
 # Map of schools with buffers and homicides ----
-
 map.2 <- tm_shape(baltimore.shape) +
   tm_borders() +
   tm_shape(baltimore.homicides) +
@@ -109,25 +111,23 @@ map.2
 
 # Let's see which schools had homicides within 1,000 feet, and how many homicides ----
 
-crimespoints <- as.data.frame(sp::over(baltimore.homicides, # Points
-                                            buffer)) # Polygons
-crimesbuffer <- crimespoints %>% 
-  filter(name != "NA") %>% # Creating a dataframe of only the points inside the polygons ("name" is not NA)
-  group_by(name) %>% # Group the school-homicide pairings by name
-  summarise(homicides = n()) # Count how many homicides
+# Duplicating the data sets to manipulate them
+points <- baltimore.homicides
+polygons <- buffer
+
+# Joining the layers
+crime.points <- st_join(points,
+                        polygons)
+
 
 # Map, but this time the schools with homicides are red triangles ----
 
-school.homicide <- as.data.frame(geo_join(baltimore.schools,
-                            crimesbuffer,
-                            "name",
-                            "name")) %>% 
-  filter(homicides != "NA")
-school.homicide <- st_as_sf(x = school.homicide, # Transform dataframe to simple feature (sf)
-                                coords = c("coords.x1", "coords.x2"), # Tell it where the latitude and longitude are
-                                crs = "+proj=longlat +datum=WGS84") # Give it a CRS
-school.homicide <- as(school.homicide, "Spatial") # Make the simple feature into a spatial feature
+# Filter out the locations without a name, which is where a homicide was NOT inside a buffer
+school.homicide <- st_join(points,
+                            polygons) %>%
+  filter(name != "NA")
 
+# Create a map with the different data
 map.3 <- tm_shape(baltimore.shape) +
   tm_borders() +
   tm_shape(baltimore.homicides) +
@@ -150,6 +150,8 @@ map.3 <- tm_shape(baltimore.shape) +
     compass.type = "4star",
     legend.outside = T
   ) +
+  tm_shape(water.shape) +
+  tm_polygons(col = "blue") +
   tm_compass(position = c("left","bottom")
   ) +
   tm_scale_bar(
@@ -184,10 +186,16 @@ map.3 <- tm_shape(baltimore.shape) +
     size = 0.5,
     labels = "Gun Homicide"
   ) +
+  tm_add_legend(
+    "fill",
+    col = "blue",
+    size = 0.5,
+    labels = "Body of Water"
+  ) +
   tmap_options(unit = "mi")
 map.3
 
 # But what if we want to see each specific location with a little more detail?
 
-tmap_mode("view")
+tmap_mode("view") # Set the map mode to interactive
 map.3

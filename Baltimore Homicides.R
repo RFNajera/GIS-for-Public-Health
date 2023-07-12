@@ -2,13 +2,12 @@
 # GIS for Public Health Using R Programming
 # https://classroom.google.com/u/0/c/MzUwMTM3NjEzODk5
 # Rene F. Najera, DrPH
-# Summer 2021
+# Updated July 2023
 
 # Libraries ----
 
 library(tidyverse) # For data manipulation
 library(tmap) # For mapping
-library(rgdal) # For dealing with spatial data, like reading the shapefiles in
 library(tigris) # For dealing with spatial data, like spatial joins
 library(sf) # For dealing with spatial datal, like setting CRS
 library(spdep) # For calculating spatial dependencies, like Moran's I or Getis-Ord
@@ -16,9 +15,9 @@ library(spdep) # For calculating spatial dependencies, like Moran's I or Getis-O
 
 # Load shapefiles ----
 
-baltimore.shape <- readOGR("Total_Population",
+baltimore.shape <- read_sf("Total_Population",
                            "Total_Population")
-water.shape <- readOGR("Water",
+water.shape <- read_sf("Water",
                        "water")
 
 # Load the homicide data ----
@@ -61,11 +60,11 @@ year.graph # Look at the bar graph of homicides by year
 
 # Get the points to be a shapefile ----
 
-baltimore.homicides <- st_as_sf(x = baltimore.homicides.data, # Transform dataframe to simple feature (sf)
+baltimore.homicides <- st_as_sf(x = baltimore.homicides.data, # Transform data frame to simple feature (sf)
                         coords = c("lon", "lat"), # Tell it where the latitude and longitude are
-                        crs = "+proj=longlat +datum=WGS84") # Give it a CRS
-baltimore.homicides <- as(baltimore.homicides, "Spatial") # Make the simple feature into a spatial feature
-baltimore.shape <- spTransform(baltimore.shape, CRS("+proj=longlat +datum=WGS84")) # Give the baltimore shape the same CRS
+                        crs = "+proj=longlat +datum=WGS84") %>% # Give it a CRS
+  mutate(CSA2010 = community)
+baltimore.shape <- st_as_sf(baltimore.shape, CRS("+proj=longlat +datum=WGS84")) # Give the Baltimore shape the same CRS
 
 # Map of where the homicides happened ----
 
@@ -170,24 +169,27 @@ homicide.dots.map <-
   tmap_options(unit = "mi")
 homicide.dots.map
 
+# set CRS for the points to be the same as shapefile
+st_crs(baltimore.homicides) <- st_crs(baltimore.shape)
+
 # Join the points to the polygons to calculate rates ----
 
-homicide.dots.polys <- sp::over(baltimore.homicides, # The dots
-                                baltimore.shape) %>% # The polygons
-  group_by(CSA2010,tpop10) %>% # By which variables you're grouping
-  summarise(homicides = n()) %>% # Number of homicides in each CSA
-  mutate(rate = (homicides/tpop10)*10000) # Caluclate the rate per 10,000  residents
-homicide.rates <- geo_join(baltimore.shape, # Join the baltimore shape to...
-                           homicide.dots.polys, # The data with the rates in it, by...
-                           "CSA2010", # These variables for the shape and...
-                           "CSA2010") # These variables for the one with rate
+homicide.rates.by.csa <- baltimore.homicides %>% 
+  group_by(CSA2010) %>% 
+  summarise(n = n()) %>% 
+  st_drop_geometry() %>% 
+  left_join(baltimore.shape) %>% 
+  mutate(rate = (n/tpop10)*10000) %>% 
+  st_as_sf()
+summary(homicide.rates.by.csa$rate) # To see the legend range
 
 # Make the map of the rates ----
 
-homicide.dots.map <-
-  tm_shape(homicide.rates) +
+homicide.rate.map <-
+  tm_shape(homicide.rates.by.csa) +
   tm_borders(col = "black") +
   tm_fill(col = "rate",
+          colorNA = "white",
           textNA = "No Homicides",
           title = "Rate per 10k Residents") +
   tm_compass(position = c("left","bottom")) +
@@ -208,10 +210,11 @@ homicide.dots.map <-
     position = c("left","bottom")
   ) +
   tmap_options(unit = "mi")
-homicide.dots.map
+homicide.rate.map
 
 # Spatial Autocorrelation with Moran's I ----
 
+homicide.rates <- homicide.rates.by.csa # Duplicate to process
 map_nbq <-
   poly2nb(homicide.rates) # Creates list of neighbors to each CSA
 added <-
@@ -253,43 +256,47 @@ moran.plot(x, map_nbq_w) # One way to make a Moran Plot
 
 # Designate the quadrants to match what we see on the plot
 
-homicide.rates$quad <-
-  NA # Create variable for where the pair falls on the quadrants of the Moran plot
-homicide.rates@data[(homicide.rates$srate >= 0 &
-                       homicide.rates$lag_srate >= 0), "quad"] <- "High-High" # High-High
-homicide.rates@data[(homicide.rates$srate <= 0 &
-                       homicide.rates$lag_srate <= 0), "quad"] <- "Low-Low" # Low-Low
-homicide.rates@data[(homicide.rates$srate >= 0 &
-                       homicide.rates$lag_srate <= 0), "quad"] <- "High-Low" # High-Low
-homicide.rates@data[(homicide.rates$srate <= 0 &
-                       homicide.rates$lag_srate >= 0), "quad"] <- "Low-High" # Low-High
+homicide.rates <- homicide.rates %>% 
+  as.data.frame() %>% 
+  mutate(quad = as.character(case_when(homicide.rates$srate >= 0 &
+                            homicide.rates$lag_srate >= 0 ~ "High-High",
+                          homicide.rates$srate <= 0 &
+                            homicide.rates$lag_srate <= 0 ~ "Low-Low",
+                          homicide.rates$srate >= 0 &
+                            homicide.rates$lag_srate <= 0 ~ "High-Low",
+                          homicide.rates$srate <= 0 &
+                            homicide.rates$lag_srate >= 0 ~ "Low-High",
+                          TRUE ~ "Error")),
+         OBJECTID = 1:nrow(homicide.rates)
+         ) %>% 
+  st_as_sf()
 
 # Make the map
 
-local.moran$OBJECTID <- 0 # Creating a new variable
-local.moran$OBJECTID <- 1:nrow(local.moran) # Adding an object ID
-local.moran$pvalue <-
-  round(local.moran$`Pr(z > 0)`, 3) # Rounding the p value to three decimal places
-local.moran$Ii <- round(local.moran$Ii,1) # Rounding the I variable to one decimal point
+local.moran <- local.moran %>% # Creating some variables to clean up
+  mutate(OBJECTID = 1:nrow(local.moran), # Object ID from 1 to 55
+         pvalue = round(`Pr(z != E(Ii))`,3), # Rounding to three places
+         Ii = round(Ii,1)) # Rounding to one place
 
-moran.i.map <- geo_join(homicide.rates, #Join the data from the rates dataframe to...
-                       local.moran, # The local Moran shape by...
-                       "OBJECTID", # These variables
-                       "OBJECTID")
+moran.i.map <- st_join(baltimore.shape,
+                       homicide.rates)
+
+moran.i.map.2 <- left_join(moran.i.map,
+                       local.moran,
+                       by = c("OBJECTID.x"="OBJECTID"))
+
 
 colors <-
   c("red", "lightpink", "skyblue2", "blue", "white") # Color Palette
 
 local.moran.map <-
-  tm_shape(moran.i.map) +
+  tm_shape(moran.i.map.2) +
   tm_fill("quad",
           title = "Local Moran's I",
           palette = colors,
           colorNA = "white") +
   tm_borders(col = "black",
              lwd = 0.5) +
-  tm_text("Ii",
-          size = 0.5) +
   tm_compass(position = c("left","bottom")) +
   tm_layout(
     main.title = "Local Moran's I for Homicide Rates in Baltimore, 2005 to 2017",
@@ -308,41 +315,30 @@ local.moran.map <-
     lwd = 1,
     position = c("left","bottom")
   ) +
-  tm_add_legend(
-    type = "text",
-    col = "black",
-    title = "Moran's I Index",
-    text = "0.0",
-    size = 4
-  ) +
   tmap_options(unit = "mi")
 local.moran.map
 
 # Keep only the CSAs with p-values less than 0.05 (though we should be using much smaller)
 
-moran.i.map$quad_sig <-
-  NA # Creates a variable for where the significant pairs fall on the Moran plot
-moran.i.map@data[(moran.i.map$srate >= 0 &
-                   moran.i.map$lag_srate >= 0) &
-                  (local.moran[, 5] <= 0.05), "quad_sig"] <- "High-High, p <0.05" # High-High
-moran.i.map@data[(moran.i.map$srate <= 0 &
-                   moran.i.map$lag_srate <= 0) &
-                  (local.moran[, 5] <= 0.05), "quad_sig"] <- "Low-Low, p <0.05" # Low-Low
-moran.i.map@data[(moran.i.map$srate >= 0 &
-                   moran.i.map$lag_srate <= 0) &
-                  (local.moran[, 5] <= 0.05), "quad_sig"] <- "High-Low, p <0.05" # High-Low
-moran.i.map@data[(moran.i.map$srate <= 0 &
-                   moran.i.map$lag_srate >= 0) &
-                  (local.moran[, 5] <= 0.05), "quad_sig"] <- "Low-High, p <0.05" # Low-High
-moran.i.map@data[(moran.i.map$srate <= 0 &
-                   moran.i.map$lag_srate >= 0) &
-                  (local.moran[, 5] <= 0.05), "quad_sig"] <-"Not Significant. p>0.05" # Non-significant
+moran.i.map.2 <- moran.i.map.2 %>% 
+  mutate(quad_sig = case_when(quad == "High-High" &
+                                (`Pr(z != E(Ii))` <= 0.05) ~ "High-High, p <0.05",
+                              quad == "Low-Low" &
+                                (`Pr(z != E(Ii))` <= 0.05) ~ "Low-Low, p <0.05",
+                              quad == "High-Low" &
+                                (`Pr(z != E(Ii))` <= 0.05) ~ "High-Low, p <0.05",
+                              quad == "Low-High" &
+                                (`Pr(z != E(Ii))` <= 0.05) ~ "Low-High, p <0.05",
+                              `Pr(z != E(Ii))` > 0.05 ~ "Not Significant, p>0.05",
+                              TRUE ~ "Error"
+                              )
+         )
 
 colors2 <-
   c("red", "blue", "white") # Color Palette
 
 local.moran.map.sig <- # Make the map of the CSAs that have significant observations
-  tm_shape(moran.i.map) +
+  tm_shape(moran.i.map.2) +
   tm_fill(
     "quad_sig",
     title = "Local Moran's I",
@@ -371,13 +367,6 @@ local.moran.map.sig <- # Make the map of the CSAs that have significant observat
     color.light = "yellow",
     lwd = 1,
     position = c("left", "bottom")
-  ) +
-  tm_add_legend(
-    type = "text",
-    col = "black",
-    title = "Moran's I p-value",
-    text = "0.000",
-    size = 4
   ) +
   tmap_options(unit = "mi")
 local.moran.map.sig # Look at the map

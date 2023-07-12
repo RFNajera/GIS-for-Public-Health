@@ -2,21 +2,21 @@
 # GIS for Public Health Using R Programming
 # https://classroom.google.com/u/0/c/MzUwMTM3NjEzODk5
 # Rene F. Najera, DrPH
-# Summer 2021
+# Updated July 2023
 
 # First, the libraries we'll need
 library(tmap)
-library(rgdal)
+library(sf)
 library(leaflet)
 library(htmltools)
 
 # Bring in the shapefiles for the city and for the water features
 
-baltimore.shape <- readOGR("Percent_of_Population_65_Years_and_over", # Folder within your main folder where the shape file is
+baltimore.shape <- read_sf("Percent_of_Population_65_Years_and_over", # Folder within your main folder where the shape file is
                            "Percent_of_Population_65_Years_and_over" # Name of the shapefile
 )
 
-water.shape <- readOGR("water","water")
+water.shape <- read_sf("water","water")
 
 # Create the map with Leaflet
 

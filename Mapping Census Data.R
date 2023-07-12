@@ -2,12 +2,12 @@
 # GIS for Public Health Using R Programming
 # https://classroom.google.com/u/0/c/MzUwMTM3NjEzODk5
 # Rene F. Najera, DrPH
-# Summer 2021
+# Updated July 2023
 
 # Libraries ----
 
 library(tidycensus) # To load the ACS data
-# census_api_key(key="YOUR_KEY", install = T, overwrite = T) # Don't forget to restart R
+census_api_key(key="7ed86305b58e22723084730c7f38fde77a8f0c3e", install = T, overwrite = T) # Don't forget to restart R
 library(tidyverse) # To manipulate data
 library(tigris) # To read/manipulate shape files
 library(sf) # To create simple features for mapping
@@ -46,7 +46,7 @@ ffx.overcrowding <- get_acs(
   year = 2019, # What year?
   geometry = T # Get the geometry to make a shape file
   ) %>%
-  select(GEOID, NAME, variable, estimate) %>% # Variables to keep
+  dplyr::select(GEOID, NAME, variable, estimate) %>%  #Variables to keep
   spread(variable, estimate) %>% # Pivot the data on these
   rowwise() %>% # How to pivot
   mutate(
@@ -66,7 +66,7 @@ ffx.overcrowding <- get_acs(
     pct_overcrowded_multi = B25014G_003 / B25014G_001 * 100,
     GEOID = as.numeric(GEOID)
   ) %>%
-  select(
+  dplyr::select(
     GEOID,
     NAME,
     pct_overcrowded_all,
@@ -76,6 +76,8 @@ ffx.overcrowding <- get_acs(
     pct_overcrowded_asian,
     pct_overcrowded_multi
   )
+
+# Create the maps of overcrowding
 
 map.1 <- tm_shape(ffx.overcrowding) +
   tm_polygons(col = c("pct_overcrowded_all",
@@ -116,7 +118,7 @@ ffx.poverty <- get_acs(geography = "tract",
                        year = 2019, # What year
                        geometry = T # Get the geometry to make the map
                        ) %>%
-  select(GEOID, NAME, variable, estimate) %>%
+  dplyr::select(GEOID, NAME, variable, estimate) %>%
   spread(variable, estimate) %>%
   rowwise() %>%
   mutate(pct_poverty_all = sum(c(B17020H_002,
@@ -134,7 +136,7 @@ ffx.poverty <- get_acs(geography = "tract",
     pct_poverty_multi = B17020G_002 / B17020G_001 * 100,
     pct_poverty_ai = B17020C_002 / B17020C_001 * 100,
     GEOID = as.numeric(GEOID)) %>%
-  select(GEOID,
+  dplyr::select(GEOID,
          NAME,
          pct_poverty_all,
          pct_poverty_white,
@@ -181,7 +183,7 @@ fred.poverty <- get_acs(geography = "tract",
                        year = 2019, # What year
                        geometry = T # Get the geometry to make the map
 ) %>%
-  select(GEOID, NAME, variable, estimate) %>%
+  dplyr::select(GEOID, NAME, variable, estimate) %>%
   spread(variable, estimate) %>%
   rowwise() %>%
   mutate(pct_poverty_all = sum(c(B17020H_002,
@@ -199,7 +201,7 @@ fred.poverty <- get_acs(geography = "tract",
   pct_poverty_multi = B17020G_002 / B17020G_001 * 100,
   pct_poverty_ai = B17020C_002 / B17020C_001 * 100,
   GEOID = as.numeric(GEOID)) %>%
-  select(GEOID,
+  dplyr::select(GEOID,
          NAME,
          pct_poverty_all,
          pct_poverty_white,
