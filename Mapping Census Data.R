@@ -7,7 +7,7 @@
 # Libraries ----
 
 library(tidycensus) # To load the ACS data
-census_api_key(key="7ed86305b58e22723084730c7f38fde77a8f0c3e", install = T, overwrite = T) # Don't forget to restart R
+census_api_key(key="USE_API_KEY", install = T, overwrite = T) # Don't forget to restart R
 library(tidyverse) # To manipulate data
 library(tigris) # To read/manipulate shape files
 library(sf) # To create simple features for mapping
